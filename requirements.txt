@@ -1,0 +1,3 @@
+praw
+sentence-transformers
+mypy
