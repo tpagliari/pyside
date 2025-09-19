@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 from torch import Tensor, cosine_similarity, topk
 
+# internal lib
+from lib import deadlink
+
 
 # This model maps sentences & paragraphs to a 384 dimensional dense vector space
 # and can be used for tasks like clustering or semantic search.
@@ -28,6 +31,7 @@ def reddit_client() -> Reddit:
     )
     return reddit
 
+
 def get_subreddits(query: str, n: int) -> list[str]:
     """Returns a list of n subreddits that have high semantic similarity
     with the user query.
@@ -40,37 +44,34 @@ def get_subreddits(query: str, n: int) -> list[str]:
     
     return [EDU_SUBREDDITS[i] for _, i in enumerate(indeces)]
 
+
 def get_posts(rinstance: Reddit, sub: str, query: str, n: int) -> list[Submission]:
-    """Given a subreddit, extract n post that match the query.
-    Not high quality: it uses reddit search and not semantic search
+    """Given a subreddit, extract n post that match the query using reddit search.
+    Internally, it ranks them by semantic similarity to the query.
     """
     subreddit : Subreddit = rinstance.subreddit(sub)
     query_new : str = "Suggest me valuable resources to learn " + query
-    posts = [post for post in subreddit.search(query_new, sort="relevance", limit=n)]
+    
+    posts : list[Submission] = [
+        post for post in subreddit.search(query_new, sort="relevance", limit=(3*n))
+    ]
+    return sorted(posts, key=lambda p: scoring(query_new, p), reverse=True)[:n]
 
-    count : int = 0
-    for i in range(len(posts)):
-        i -= count
-        if not validate(query_new, posts[i]):
-            posts.pop(i)
-            count += 1
-      
-    return posts
 
-def validate(query: str, post: Submission) -> bool:
-    """Utility function to understand if a reddit submission is compatible
-    with the user query: returns True in this case, else False.
+def scoring(query: str, post: Submission) -> float:
+    """Return a semantic similarity score between query and post text.
     """
     text  : str = post.title + ": " + post.selftext
     etext : Tensor = MODEL.encode(text, convert_to_tensor=True)
     equery: Tensor = MODEL.encode(query, convert_to_tensor=True)
     similarity : Tensor = cosine_similarity(etext, equery, dim=0)
-    if similarity.item() > 0.5:
-        return True
-    return False
+    return similarity.item()
+
 
 def get_resources(post: Submission) -> list[str]:
-    """Get resources (links only at the moment) from a post"""
+    """Get resources (links only at the moment) from a post.
+    Internally, it checks that the link is not dead.
+    """
     re_url: str = r'(https?://\S+)'
     
     post.comments.replace_more(limit=0)
@@ -80,7 +81,9 @@ def get_resources(post: Submission) -> list[str]:
     for comment in sorted(comments, key=lambda c: c.score, reverse=True):
         urls = re.findall(re_url, comment.body)
         for url in urls:
-            resources.add(url.strip(").,]"))
+            clean_url = url.strip(").,]")
+            if not deadlink(clean_url, 3):
+                resources.add(clean_url)
         #if "book" in comment.body.lower() or "course" in comment.body.lower():
         #    resources.add(comment.body.strip())
 
@@ -89,16 +92,17 @@ def get_resources(post: Submission) -> list[str]:
 
 def get_all_resources(query: str) -> list[str]:
     rinstance : Reddit = reddit_client()
-    subreddits : list[str] = get_subreddits(query, 3)
+    subreddits : list[str] = get_subreddits(query, 2)
 
     all_resources = []
     for sub in subreddits:
-        posts : list[Submission] = get_posts(rinstance, sub, query, 5)
+        posts : list[Submission] = get_posts(rinstance, sub, query, 3)
         for post in posts:
             links : list[str] = get_resources(post)
             all_resources.extend(links)
 
     return all_resources
+
 
 if __name__ == "__main__":
     user_query : str = input("What do you want to learn?\n")
