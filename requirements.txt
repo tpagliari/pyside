@@ -1,3 +1,4 @@
 praw
 sentence-transformers
 mypy
+faiss.cpu

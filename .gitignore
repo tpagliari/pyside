@@ -3,3 +3,4 @@
 .venv*
 .mypy*
 *__pycache__*
+subreddits*

@@ -1,18 +1,16 @@
 import os
 import re
+import numpy
+from dotenv import load_dotenv
+from typing import Sequence, Tuple, List
+
 from praw import Reddit # type: ignore
 from praw.models import Submission, Subreddit # type: ignore
-from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
-from torch import Tensor, cosine_similarity, topk
+from torch import Tensor, cosine_similarity
 
 # internal lib
 from lib import deadlink
-
-
-# This model maps sentences & paragraphs to a 384 dimensional dense vector space
-# and can be used for tasks like clustering or semantic search.
-MODEL = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+from embeddings import SemanticIndex
 
 # To start simple, define some known subreddits
 EDU_SUBREDDITS = [
@@ -20,6 +18,7 @@ EDU_SUBREDDITS = [
     "computerscience", "math", "MachineLearning", "History", "philosophy", "LanguageLearning",
     "biology", "chemistry", "neuro", "Psychology", "Datacamp", "datascience", "AskHistorians"
 ]
+
 
 def reddit_client() -> Reddit:
     """Create a read-only reddit instance."""
@@ -30,45 +29,47 @@ def reddit_client() -> Reddit:
         user_agent = os.getenv("REDDIT_USER_AGENT")
     )
     return reddit
+    
 
+semantic = SemanticIndex()
 
-def get_subreddits(query: str, n: int) -> list[str]:
+def get_subreddits(query: str, n: int) -> List[str]:
     """Returns a list of n subreddits that have high semantic similarity
     with the user query.
     """
-    embeddings_subreddits : Tensor = MODEL.encode(EDU_SUBREDDITS, convert_to_tensor=True)
-    embedding_query       : Tensor = MODEL.encode(query, convert_to_tensor=True)
-    
-    similarities : Tensor = cosine_similarity(embeddings_subreddits, embedding_query)  
-    indeces : Tensor = topk(similarities, n)[1]
-    
-    return [EDU_SUBREDDITS[i] for _, i in enumerate(indeces)]
+    results = semantic.query(query, top_k=n)
+    return [sub for sub, _ in results]
 
 
-def get_posts(rinstance: Reddit, sub: str, query: str, n: int) -> list[Submission]:
-    """Given a subreddit, extract n post that match the query using reddit search.
-    Internally, it ranks them by semantic similarity to the query.
+def get_posts(rinstance: Reddit, sub: str, query: str, n: int) -> List[Submission]:
     """
-    subreddit : Subreddit = rinstance.subreddit(sub)
-    query_new : str = "Suggest me valuable resources to learn " + query
-    
-    posts : list[Submission] = [
-        post for post in subreddit.search(query_new, sort="relevance", limit=(3*n))
+    Given a subreddit, extract n post that match the query using reddit search.
+
+    TODO: Find a *fast* way to further rank posts by semantic similarity to the query. We can't build
+    another faiss index while running (?), but we can't either rely solely on reddit search. 
+    """
+    subreddit: Subreddit = rinstance.subreddit(sub)
+    query_new: str = "Resources to learn " + query
+
+    posts: List[Submission] = [
+        post for post in subreddit.search(query_new, sort="relevance", limit=(3 * n))
     ]
     return sorted(posts, key=lambda p: scoring(query_new, p), reverse=True)[:n]
 
 
 def scoring(query: str, post: Submission) -> float:
     """Return a semantic similarity score between query and post text.
+
+    TODO: should be moved in the embeddings library
     """
-    text  : str = post.title + ": " + post.selftext
-    etext : Tensor = MODEL.encode(text, convert_to_tensor=True)
-    equery: Tensor = MODEL.encode(query, convert_to_tensor=True)
-    similarity : Tensor = cosine_similarity(etext, equery, dim=0)
+    text: str = post.title + ": " + post.selftext
+    etext: Tensor = semantic.model.encode(text, convert_to_tensor=True)
+    equery: Tensor = semantic.model.encode(query, convert_to_tensor=True) # TODO: we are building this embedding every time we assign a score, nonsense
+    similarity: Tensor = cosine_similarity(etext, equery, dim=0)
     return similarity.item()
 
 
-def get_resources(post: Submission) -> list[str]:
+def get_resources(post: Submission) -> List[str]:
     """Get resources (links only at the moment) from a post.
     Internally, it checks that the link is not dead.
     """
@@ -94,6 +95,10 @@ def get_all_resources(query: str) -> list[str]:
     rinstance : Reddit = reddit_client()
     subreddits : list[str] = get_subreddits(query, 2)
 
+    # Log info while developing
+    print("I am using these subreddits (semantic score):\n")
+    print(subreddits)
+
     all_resources = []
     for sub in subreddits:
         posts : list[Submission] = get_posts(rinstance, sub, query, 3)
@@ -105,6 +110,11 @@ def get_all_resources(query: str) -> list[str]:
 
 
 if __name__ == "__main__":
+    # Run once to build the index
+    first_time = False
+    if first_time:
+        semantic.build(EDU_SUBREDDITS)
+
     user_query : str = input("What do you want to learn?\n")
-    links : list[str]= get_all_resources(query=user_query)
+    links : List[str]= get_all_resources(query=user_query)
     print("Got these:\n", links)
