@@ -9,7 +9,7 @@ from praw.models import Submission, Subreddit # type: ignore
 from torch import Tensor, cosine_similarity
 
 # internal lib
-from lib import deadlink
+from lib import filter_live_urls, deadlink
 from embeddings import SemanticIndex
 
 # To start simple, define some known subreddits
@@ -77,18 +77,14 @@ def get_resources(post: Submission) -> List[str]:
     
     post.comments.replace_more(limit=0)
     comments : list = post.comments.list()
-    
-    resources = set()
-    for comment in sorted(comments, key=lambda c: c.score, reverse=True):
-        urls = re.findall(re_url, comment.body)
-        for url in urls:
-            clean_url = url.strip(").,]")
-            if not deadlink(clean_url, 3):
-                resources.add(clean_url)
-        #if "book" in comment.body.lower() or "course" in comment.body.lower():
-        #    resources.add(comment.body.strip())
 
-    return list(resources) 
+    # Collect all URLs first
+    urls = (url.strip(").,]")
+            for comment in sorted(comments, key=lambda c: c.score, reverse=True)
+            for url in re.findall(re_url, comment.body))
+    
+    # Filter in parallel
+    return list(filter_live_urls(set(urls), timeout=3, max_workers=10))
 
 
 def get_all_resources(query: str) -> list[str]:
