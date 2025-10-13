@@ -1,16 +1,16 @@
 import os
 import re
-import numpy
+
 from dotenv import load_dotenv
-from typing import Sequence, Tuple, List
+from typing import List
 
 from praw import Reddit # type: ignore
 from praw.models import Submission, Subreddit # type: ignore
 from torch import Tensor, cosine_similarity
 
 # internal lib
-from lib import filter_live_urls, deadlink
-from embeddings import SemanticIndex
+from .lib import filter_live_urls, deadlink
+from .embeddings import SemanticIndex
 
 # To start simple, define some known subreddits
 EDU_SUBREDDITS = [
@@ -29,7 +29,6 @@ def reddit_client() -> Reddit:
         user_agent = os.getenv("REDDIT_USER_AGENT")
     )
     return reddit
-    
 
 semantic = SemanticIndex()
 

@@ -5,6 +5,8 @@ from sentence_transformers import SentenceTransformer
 
 # --- Types ---
 from typing import Sequence, Tuple, List
+from pathlib import Path
+
 Subreddit = str
 SearchResult = Tuple[Subreddit, float]
 IndexPath = str
@@ -26,8 +28,10 @@ class SemanticIndex:
         names_file: str = "subredditsNames.npy") -> None:
         
         self.model: SentenceTransformer = SentenceTransformer(model_name)
-        self.index_file: IndexPath = index_file
-        self.names_file: str = names_file
+
+        module_dir = Path(__file__).parent
+        self.index_file: IndexPath = str(module_dir / index_file)
+        self.names_file: str = str(module_dir / names_file)
         
 
     def build(self, subreddits: Sequence[Subreddit]) -> None:
