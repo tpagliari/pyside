@@ -76,8 +76,8 @@ def get_resources(post: Submission) -> List[str]:
     """
     re_url: str = r'(https?://\S+)'
     
-    post.comments.replace_more(limit=0)
-    comments : list = post.comments.list()
+    post.comments.replace_more(limit=1) # Expands only the top level of MoreComments
+    comments : list = post.comments.list()[:50] # cap comments checked
 
     # Collect all URLs first
     urls = (url.strip(").,]")
