@@ -7,6 +7,7 @@ from typing import List
 from praw import Reddit # type: ignore
 from praw.models import Submission, Subreddit # type: ignore
 from torch import Tensor, cosine_similarity
+from concurrent.futures import ThreadPoolExecutor
 
 # internal lib
 from .lib import filter_live_urls, deadlink
@@ -70,6 +71,8 @@ def scoring(equery: Tensor, post: Submission) -> float:
 def get_resources(post: Submission) -> List[str]:
     """Get resources (links only at the moment) from a post.
     Internally, it checks that the link is not dead.
+
+    TODO: even suggested books in the comments should be retrieved.
     """
     re_url: str = r'(https?://\S+)'
     
@@ -93,14 +96,22 @@ def get_all_resources(query: str) -> list[str]:
     print("I am using these subreddits (semantic score):\n")
     print(subreddits)
 
-    all_resources = []
-    for sub in subreddits:
-        posts : list[Submission] = get_posts(rinstance, sub, query, 3)
+    def fetch(sub: str) -> list[str]:
+        """Helper function to fetch posts per subreddit and extract
+        resources (links).
+        """
+        posts: list[Submission] = get_posts(rinstance, sub, query, 3)
+        resources = []
         for post in posts:
-            links : list[str] = get_resources(post)
-            all_resources.extend(links)
+            links: list[str] = get_resources(post)
+            resources.extend(links)
+        return resources
+    
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        results = executor.map(fetch, subreddits)
+    
+    return [link for links in results for link in links]
 
-    return all_resources
 
 
 if __name__ == "__main__":
