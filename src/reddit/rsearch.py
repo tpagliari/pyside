@@ -10,15 +10,16 @@ from torch import Tensor, cosine_similarity
 from concurrent.futures import ThreadPoolExecutor
 
 # internal lib
-from .lib import filter_live_urls, deadlink
+from .lib import filter_live_urls
 from .embeddings import SemanticIndex
+from .const import EDU_SUBREDDITS
 
 # To start simple, define some known subreddits
-EDU_SUBREDDITS = [
-    "askscience", "Physics", "learnmath", "learnprogramming", "AskAcademia",
-    "computerscience", "math", "MachineLearning", "History", "philosophy", "LanguageLearning",
-    "biology", "chemistry", "neuro", "Psychology", "Datacamp", "datascience", "AskHistorians"
-]
+#EDU_SUBREDDITS = [
+#    "askscience", "Physics", "learnmath", "learnprogramming", "AskAcademia",
+#    "computerscience", "math", "MachineLearning", "History", "philosophy", "LanguageLearning",
+#    "biology", "chemistry", "neuro", "Psychology", "Datacamp", "datascience", "AskHistorians"
+#]
 
 
 def reddit_client() -> Reddit:
@@ -90,7 +91,7 @@ def get_resources(post: Submission) -> List[str]:
 
 def get_all_resources(query: str) -> list[str]:
     rinstance : Reddit = reddit_client()
-    subreddits : list[str] = get_subreddits(query, 2)
+    subreddits : list[str] = get_subreddits(query, 4)
 
     # Log info while developing
     print("I am using these subreddits (semantic score):\n")
@@ -118,7 +119,10 @@ if __name__ == "__main__":
     # Run once to build the index
     first_time = False
     if first_time:
+        import sys
         semantic.build(EDU_SUBREDDITS)
+        print("Completed embedding of educational subreddits")
+        sys.exit(0)
 
     user_query : str = input("What do you want to learn?\n")
     links : List[str]= get_all_resources(query=user_query)
