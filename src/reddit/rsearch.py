@@ -48,22 +48,21 @@ def get_posts(rinstance: Reddit, sub: str, query: str, n: int) -> List[Submissio
     another faiss index while running (?), but we can't either rely solely on reddit search. 
     """
     subreddit: Subreddit = rinstance.subreddit(sub)
-    query_new: str = "Resources to learn " + query
 
+    query_new: str = "Resources to learn " + query
+    equery: Tensor = semantic.model.encode(query_new, convert_to_tensor=True)
+    
     posts: List[Submission] = [
         post for post in subreddit.search(query_new, sort="relevance", limit=(3 * n))
     ]
-    return sorted(posts, key=lambda p: scoring(query_new, p), reverse=True)[:n]
+    return sorted(posts, key=lambda p: scoring(equery, p), reverse=True)[:n]
 
 
-def scoring(query: str, post: Submission) -> float:
-    """Return a semantic similarity score between query and post text.
-
-    TODO: should be moved in the embeddings library
+def scoring(equery: Tensor, post: Submission) -> float:
+    """Score a single post against pre-computed query embedding.
     """
     text: str = post.title + ": " + post.selftext
     etext: Tensor = semantic.model.encode(text, convert_to_tensor=True)
-    equery: Tensor = semantic.model.encode(query, convert_to_tensor=True) # TODO: we are building this embedding every time we assign a score, nonsense
     similarity: Tensor = cosine_similarity(etext, equery, dim=0)
     return similarity.item()
 

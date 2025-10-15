@@ -4,7 +4,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 # --- Types ---
-from typing import Sequence, Tuple, List
+from typing import Sequence, Tuple, List, Optional
 from pathlib import Path
 
 Subreddit = str
@@ -32,6 +32,10 @@ class SemanticIndex:
         module_dir = Path(__file__).parent
         self.index_file: IndexPath = str(module_dir / index_file)
         self.names_file: str = str(module_dir / names_file)
+
+        # caching the index to avoid reloading it in query() method
+        self._index_cache: Optional[faiss.Index] = None
+        self._names_cache: Optional[np.ndarray]  = None
         
 
     def build(self, subreddits: Sequence[Subreddit]) -> None:
@@ -56,12 +60,18 @@ class SemanticIndex:
 
     def load(self) -> Tuple[faiss.Index, np.ndarray]:
         """
-        Load an existing FAISS index and subreddit names from disk.
+        Load an existing FAISS index and subreddit names from disk,
+        or return cached index and names.
         """
-        index: faiss.Index = faiss.read_index(self.index_file)
-        subreddits: np.ndarray = np.load(self.names_file, allow_pickle=True)
-        return index, subreddits
-
+        if not self._index_cache:
+            self._index_cache = faiss.read_index(self.index_file)
+            self._names_cache = np.load(self.names_file, allow_pickle=True)
+        
+        if self._index_cache is None or self._names_cache is None:
+            raise RuntimeError("failed to load subreddits index or names from disk")
+        
+        return self._index_cache, self._names_cache
+        
 
     def query(self, query: str, top_k: int) -> List[SearchResult]:
         """
