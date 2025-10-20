@@ -3,28 +3,37 @@ from typing import List, Optional
 
 # internal modules
 from wikiMedia.wsearch import wikipedia_search, WikiResult
-from reddit.rsearch import get_all_resources
+import reddit.rsearch as reddit
+import hackerNews.hnsearch as hn
 
 
-def output_fmt(wiki: Optional[WikiResult], reddit_links: List[str]) -> str:
+def output_fmt(wiki: Optional[WikiResult],
+               reddit_links: List[str],
+               hn_links: List[str]) -> str:
     """Format std output results"""
     lines = []
     if wiki:
         lines.append("Let's start with a wiki article:")
-        lines.append(f"- {wiki.title}: {wiki.url}\n")
+        lines.append(f"- {wiki.title}: {wiki.url}")
 
+    lines.append("\nHere's what the reddit community suggests:")
     lines.extend(f"- {link}" for link in reddit_links)
+    lines.append("\nDive deep with HN resources:")
+    lines.extend(f"- {link}" for link in hn_links)
     return "\n".join(lines)
 
 
 async def search(query: str) -> str:
     """Search wiki and reddit, return formatted results"""
     wiki_task = wikipedia_search(query)
-    reddit_task = asyncio.to_thread(get_all_resources, query)
+    reddit_task = asyncio.to_thread(reddit.get_all_resources, query, 2, 2)
+    hn_task = asyncio.to_thread(hn.get_resources, query, hits=10)
 
-    wiki_result, reddit_links = await asyncio.gather(wiki_task, reddit_task)
+    wiki_result, reddit_links, hn_links = await asyncio.gather(
+        wiki_task, reddit_task, hn_task
+    )
 
-    return output_fmt(wiki_result, reddit_links)
+    return output_fmt(wiki_result, reddit_links, hn_links)
 
 async def main():
     query = input("What do you want to learn?\n")

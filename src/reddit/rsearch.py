@@ -89,9 +89,16 @@ def get_resources(post: Submission) -> List[str]:
     return list(filter_live_urls(set(urls), timeout=3, max_workers=10))
 
 
-def get_all_resources(query: str) -> list[str]:
+def get_all_resources(query: str, no_subreddits: int = 2, no_posts: int = 4) -> list[str]:
+    """
+    Main entrance point, where:
+      - query: user search term
+      - no_subreddits: number of subreddits you want for the rsearch
+      - no_posts: number of posts per subreddit to use as links source
+      - returns the list of links obtained
+    """
     rinstance : Reddit = reddit_client()
-    subreddits : list[str] = get_subreddits(query, 4)
+    subreddits : list[str] = get_subreddits(query, no_subreddits)
 
     # Log info while developing
     print("I am using these subreddits (semantic score):\n")
@@ -101,7 +108,7 @@ def get_all_resources(query: str) -> list[str]:
         """Helper function to fetch posts per subreddit and extract
         resources (links).
         """
-        posts: list[Submission] = get_posts(rinstance, sub, query, 3)
+        posts: list[Submission] = get_posts(rinstance, sub, query, no_posts)
         resources = []
         for post in posts:
             links: list[str] = get_resources(post)
