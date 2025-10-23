@@ -13,12 +13,9 @@ def output_fmt(wiki: Optional[WikiResult],
     """Format std output results"""
     lines = []
     if wiki:
-        lines.append("Let's start with a wiki article:")
         lines.append(f"- {wiki.title}: {wiki.url}")
 
-    lines.append("\nHere's what the reddit community suggests:")
     lines.extend(f"- {link}" for link in reddit_links)
-    lines.append("\nDive deep with HN resources:")
     lines.extend(f"- {link}" for link in hn_links)
     return "\n".join(lines)
 
