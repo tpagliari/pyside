@@ -1,29 +1,66 @@
+# app.py
 import streamlit as st
 import asyncio
-from typing import List
+from main import search_stream
 
-# internal lib
-from main import search
-
-
-st.title("Learn and read, Lou Reed!")
-st.markdown("Semantic discovery engine for quality learning resources")
-
-query: str = st.text_input(
-    "What do you want to learn?",
-    placeholder="e.g. linear algebra, machine learning, quantum physics..."
+# ---- Page Config ----
+st.set_page_config(
+    page_title="OP",
+    page_icon="🦦",
+    layout="centered",
 )
 
-if st.button("🦦 Search", type="primary") or query:
-    if query:
-        with st.spinner("Cooking..."):
-            res = asyncio.run(search(query))
-            st.markdown("---")
-            lines: List[str] = res.split("\n")
-            for line in lines:
-                st.markdown("\t" + line)
-    else:
-        st.warning("Please enter a topic search. Don't know where to start? Why don't you try with `linear algebra`!")
+# ---- Header ----
+st.markdown(
+    """
+    <h1 style='text-align: center; margin-bottom: 0;'>Open Knowledge 🦦</h1>
+    <p style='text-align: center; color: gray; font-size: 1.1rem;'>
+        OP is a semantic discovery engine for quality learning resources.
+    </p>
+    """,
+    unsafe_allow_html=True,
+)
 
-st.markdown("---")
-st.markdown("*Powered by semantic search across trusted learning platforms*")
+
+# ---- Query Input ----
+col1, col2 = st.columns([8, 1])
+
+with col1:
+    query = st.text_input(
+        "What would you like to learn?",
+        placeholder="Linear algebra",
+        label_visibility="collapsed",
+    )
+
+with col2:
+    send_clicked = st.button("➤", help="Search")
+
+search_triggered = query and (send_clicked or query)
+
+# ---- Action ----
+if search_triggered:
+    st.markdown("---")
+
+    async def run_search():
+
+        with st.container(border=True):
+            st.markdown("#### WikiMedia")
+            wiki_placeholder = st.empty()
+        with st.container(border=True):
+            st.markdown("#### HackerNews")
+            hn_placeholder = st.empty()
+        with st.container(border=True):
+            st.markdown("#### Reddit")
+            reddit_placeholder = st.empty()
+
+        placeholders = {
+            "WikiMedia": wiki_placeholder,
+            "HackerNews": hn_placeholder,
+            "Reddit": reddit_placeholder,
+        }
+
+        async for source, lines in search_stream(query):
+            content_md = "\n".join(lines)
+            placeholders[source].markdown(content_md)
+
+    asyncio.run(run_search())
