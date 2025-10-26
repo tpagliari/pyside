@@ -1,23 +1,9 @@
 import asyncio
-from typing import List, Optional, Callable
 
 # internal modules
-from wikiMedia.wsearch import wikipedia_search, WikiResult
+from wikiMedia.wsearch import wikipedia_search
 import reddit.rsearch as reddit
 import hackerNews.hnsearch as hn
-
-
-def output_fmt(wiki: Optional[WikiResult] = None,
-               reddit_links: List[str]    = [],
-               hn_links: List[str]        = []) -> str:
-    """Format std output results"""
-    lines = []
-    if wiki:
-        lines.append(f"- {wiki.title}: {wiki.url}")
-
-    lines.extend(f"- {link}" for link in reddit_links)
-    lines.extend(f"- {link}" for link in hn_links)
-    return "\n".join(lines)
 
 
 async def search_stream(query: str):
@@ -54,22 +40,12 @@ async def search_stream(query: str):
                 yield ("Reddit", [f"- {link}" for link in reddit_links])
 
 
-async def search(query: str) -> str:
-    """Search wiki and reddit, return formatted results"""
-    wiki_task = wikipedia_search(query)
-    reddit_task = asyncio.to_thread(reddit.get_all_resources, query, 2, 2)
-    hn_task = asyncio.to_thread(hn.get_resources, query, hits=10)
-
-    wiki_result, reddit_links, hn_links = await asyncio.gather(
-        wiki_task, reddit_task, hn_task
-    )
-
-    return output_fmt(wiki_result, reddit_links, hn_links)
-
 async def main():
-    query = input("What do you want to learn?\n")
-    output = await search(query=query)
-    print(output)
+    """Only for CLI usage"""
+    q = input("What would you like to learn?\n")
+    async for src, lines in search_stream(q):
+        print(f"{src}: {lines}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

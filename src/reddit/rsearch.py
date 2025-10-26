@@ -14,13 +14,6 @@ from .lib import filter_live_urls
 from .embeddings import SemanticIndex
 from .const import EDU_SUBREDDITS
 
-# To start simple, define some known subreddits
-#EDU_SUBREDDITS = [
-#    "askscience", "Physics", "learnmath", "learnprogramming", "AskAcademia",
-#    "computerscience", "math", "MachineLearning", "History", "philosophy", "LanguageLearning",
-#    "biology", "chemistry", "neuro", "Psychology", "Datacamp", "datascience", "AskHistorians"
-#]
-
 
 def reddit_client() -> Reddit:
     """Create a read-only reddit instance."""
@@ -101,8 +94,7 @@ def get_all_resources(query: str, no_subreddits: int = 2, no_posts: int = 4) -> 
     subreddits : list[str] = get_subreddits(query, no_subreddits)
 
     # Log info while developing
-    print("I am using these subreddits (semantic score):\n")
-    print(subreddits)
+    print(f"I am using these subreddits (semantic score):\n{subreddits}\n\n")
 
     def fetch(sub: str) -> list[str]:
         """Helper function to fetch posts per subreddit and extract
