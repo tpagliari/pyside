@@ -17,7 +17,7 @@ async def search_stream(query: str):
         asyncio.to_thread(reddit.get_all_resources, query, 2, 2))
     
     hn_task = asyncio.create_task(
-        asyncio.to_thread(hn.get_resources, query, hits=10))
+        asyncio.to_thread(hn.get_resources, query, hits=10, include_meta=True))
 
     tasks = {
         "wiki": wiki_task,
@@ -31,10 +31,13 @@ async def search_stream(query: str):
         for d in done:
             if d == tasks["wiki"]:
                 wiki = d.result()
-                yield ("WikiMedia", [f"- {wiki.title}: {wiki.url}"])
+                yield ("WikiMedia", [f"- {wiki.title}\n  {wiki.url}"])
             elif d == tasks["hn"]:
-                hn_links = d.result()
-                yield ("HackerNews", [f"- {link}" for link in hn_links])
+                hn_resources = d.result()
+                lines = [
+                    f"- {r.title}\n  {r.url}\n  {r.description or '(no description)'}" for r in hn_resources
+                ]
+                yield ("HackerNews", lines)
             elif d == tasks["reddit"]:
                 reddit_links = d.result()
                 yield ("Reddit", [f"- {link}" for link in reddit_links])

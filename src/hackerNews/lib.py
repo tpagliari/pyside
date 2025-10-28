@@ -1,8 +1,9 @@
 import requests
 import socket
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse, ParseResult
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Iterable, Set
+from typing import Iterable, Set, Optional, Dict, Tuple
     
 
 def check_ping(url: str, timeout: int = 2) -> bool:
@@ -60,3 +61,44 @@ def filter_live_urls(urls: Iterable[str], timeout: int = 3, max_workers: int = 1
         return {url for future in as_completed(futures) 
                 if (result := future.result()) and result[1]
                 for url in [result[0]]}
+    
+
+def get_meta(url: str, timeout: int = 3) -> Optional[str]:
+    """Try to extract a short meta description from the target page."""
+    try:
+        r = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        desc = soup.find("meta", attrs={"name": "description"})
+        if desc and desc.get("content"):
+            return str(desc["content"]).strip()
+
+        # fallback: use first paragraph
+        p = soup.find("p")
+        if p:
+            text = " ".join(p.get_text().strip().split()[:50])
+            return text
+
+        return None
+    except requests.RequestException:
+        return None
+    
+
+def get_meta_bulk(urls: Iterable[str], timeout: int = 3, max_workers : int = 10) -> Dict[str, Optional[str]]:
+    """
+    Fetch meta descriptions for multiple URLs in parallel.
+    Returns {url: description or None}.
+    """
+
+    def fetch(u: str) -> Tuple[str, Optional[str]]:
+        return (u, get_meta(u, timeout))
+    
+    results : Dict[str, Optional[str]] = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(fetch, url): url for url in urls}
+        for future in as_completed(futures):
+            url, desc = future.result()
+            results[url] = desc
+            
+    return results

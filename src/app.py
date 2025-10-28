@@ -1,7 +1,17 @@
 # app.py
 import streamlit as st
 import asyncio
+import re
 from main import search_stream
+
+# ---- helpers ----
+def make_clickable(line: str) -> str:
+    """Find all http/https URLs and wrap them in <a> tags"""
+    return re.sub(
+        r'(https?://[^\s]+)',
+        r'<a href="\1" target="_blank" style="color:#1f77b4;">\1</a>',
+        line
+    )
 
 # ---- Page Config ----
 st.set_page_config(
@@ -60,7 +70,12 @@ if search_triggered:
         }
 
         async for source, lines in search_stream(query):
-            content_md = "\n".join(lines)
-            placeholders[source].markdown(content_md)
+            html_content = "<br>".join(
+                f"<div style='margin-bottom: 1em;'>"
+                + make_clickable(line.replace("\n", "<br>"))
+                + "</div>"
+                for line in lines
+            )
+            placeholders[source].markdown(html_content, unsafe_allow_html=True)
 
     asyncio.run(run_search())
