@@ -1,4 +1,5 @@
 from typing import Dict, Optional, List
+from collections import OrderedDict
 from dataclasses import dataclass
 import requests
 
@@ -7,11 +8,17 @@ from .const import ALGOLIA_SEARCH_URL
 from .lib import filter_live_urls, get_meta_bulk
 
 
-@dataclass
+@dataclass(frozen=True)
 class HackerNewsResource:
     title : str
     url : str
     description: Optional[str]
+
+    def __eq__(self, other):
+        return self.url == other.url
+    
+    def __hash__(self):
+        return hash(self.url)
 
 
 def get_json(url: str, params: Optional[Dict] = None, timeout: int = 6) -> Optional[Dict]:
@@ -68,14 +75,18 @@ def get_resources(query: str, hits: int = 50, max_workers: int = 10, timeout: in
 
     TODO: semanitc scoring when extracting posts.
     """
-    query = f"Learn {query}"
-    resources: List[HackerNewsResource] = search_hn(query, hits)
+    learn_query = f"Learn {query}"
+    resources: List[HackerNewsResource] = search_hn(learn_query, hits)
+    if (n := len(resources)) < hits:
+        resources.extend(search_hn(query, hits-n)) # these articles should be more specialized
+
     if not resources:
         return []
 
     live_urls = filter_live_urls([r.url for r in resources], timeout=timeout, max_workers=max_workers)
-    live_resources = [r for r in resources if r.url in set(live_urls)]
-    
+    live_resources = [r for r in resources if r.url in live_urls]
+    live_resources = list(OrderedDict.fromkeys(live_resources))
+
     if include_meta:
         meta = get_meta_bulk([r.url for r in live_resources])
     else:
@@ -88,7 +99,6 @@ def get_resources(query: str, hits: int = 50, max_workers: int = 10, timeout: in
         ) for r in live_resources
     ]
     return enriched
-
 
 
 

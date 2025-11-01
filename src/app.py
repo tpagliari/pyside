@@ -1,14 +1,17 @@
 # app.py
 import streamlit as st
 import asyncio
+from html import escape
 import re
+
 from main import search_stream
 
 # ---- helpers ----
 def make_clickable(line: str) -> str:
-    """Find all http/https URLs and wrap them in <a> tags"""
+    """Safer link rendering: escape HTML first, then reinsert safe <a> tags."""
+    line = escape(line)
     return re.sub(
-        r'(https?://[^\s]+)',
+        r'(https?://[^\s<>"\']+)',
         r'<a href="\1" target="_blank" style="color:#1f77b4;">\1</a>',
         line
     )
@@ -70,10 +73,10 @@ if search_triggered:
         }
 
         async for source, lines in search_stream(query):
-            html_content = "<br>".join(
+            html_content = "".join(
                 f"<div style='margin-bottom: 1em;'>"
-                + make_clickable(line.replace("\n", "<br>"))
-                + "</div>"
+                f"{make_clickable(escape(line)).replace('\n', '<br>')}"
+                f"</div>"
                 for line in lines
             )
             placeholders[source].markdown(html_content, unsafe_allow_html=True)
