@@ -79,6 +79,7 @@ def get_resources(post: Submission) -> List[str]:
             for url in re.findall(re_url, comment.body))
     
     # Filter in parallel
+    # TODO: I think here we are losing ordering of links, order is important to have best links ontop!!
     return list(filter_live_urls(set(urls), timeout=3, max_workers=10))
 
 
