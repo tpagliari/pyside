@@ -62,7 +62,7 @@ def search_hn(query: str, hits: int = 50) -> List[HackerNewsResource]:
     return resources
 
 
-def get_resources(query: str, hits: int = 50, max_workers: int = 10, timeout: int = 3, include_meta: bool = False) -> List[HackerNewsResource]:
+def get_resources(query: str, hits: int = 50, max_workers: int = 30, timeout: int = 3, include_meta: bool = False) -> List[HackerNewsResource]:
     """
     Entry point for HN search:
       - search HN for relevant results

@@ -80,7 +80,7 @@ def get_resources(post: Submission) -> List[str]:
     
     # Filter in parallel
     # TODO: I think here we are losing ordering of links, order is important to have best links ontop!!
-    return list(filter_live_urls(set(urls), timeout=3, max_workers=10))
+    return list(filter_live_urls(set(urls), max_workers=30))
 
 
 def get_all_resources(query: str, no_subreddits: int = 2, no_posts: int = 4) -> list[str]:
