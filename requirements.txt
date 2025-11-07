@@ -4,4 +4,4 @@ mypy
 faiss.cpu
 aiohttp
 asyncio
-streamlit
+fastapi

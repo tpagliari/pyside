@@ -1,9 +1,9 @@
 import asyncio
 
 # internal modules
-from wikiMedia.wsearch import wikipedia_search
-import reddit.rsearch as reddit
-import hackerNews.hnsearch as hn
+from .wikiMedia.wsearch import wikipedia_search
+from .reddit.rsearch import get_all_resources as reddit_search
+from .hackerNews.hnsearch import get_resources as hn_search
 
 
 async def search_stream(query: str):
@@ -14,10 +14,10 @@ async def search_stream(query: str):
         wikipedia_search(query))
     
     reddit_task = asyncio.create_task(
-        asyncio.to_thread(reddit.get_all_resources, query, 2, 2))
+        asyncio.to_thread(reddit_search, query, 2, 2))
     
     hn_task = asyncio.create_task(
-        asyncio.to_thread(hn.get_resources, query, hits=10, include_meta=True))
+        asyncio.to_thread(hn_search, query, hits=10, include_meta=True))
 
     tasks = {
         "wiki": wiki_task,
