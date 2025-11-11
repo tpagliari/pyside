@@ -17,7 +17,8 @@ class Resource(rio.Component):
                     self.title,
                     style=rio.TextStyle(font_weight="bold", font_size=1),
                     selectable=True,
-                    wrap=True,
+                    overflow="wrap",
+                    justify="center",
                 ),
                 rio.Link(
                     content=rio.Text("Read the Article", italic=True, justify="center", font_size=0.9, fill=rio.Color.from_hex("#0377fb")),
@@ -25,11 +26,12 @@ class Resource(rio.Component):
                     open_in_new_tab=True,
                 ),
                 rio.Text(
-                    self.description,
+                    text=self.description,
                     style="text",
                     selectable=True,
-                    wrap=True,
+                    overflow="wrap",
                     font_size=0.9,
+                    justify="center"
                 ),
                 spacing=0.5,
                 margin=1.5,
