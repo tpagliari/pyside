@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from src.main import search_stream
+from .src.main import search_stream
 
 
 app = FastAPI()

@@ -31,16 +31,16 @@ async def search_stream(query: str):
         for d in done:
             if d == tasks["wiki"]:
                 wiki = d.result()
-                yield ("WikiMedia", [f"- {wiki.title}\n  {wiki.url}"])
+                yield ("WikiMedia", [f"{wiki.title}\n  {wiki.url}\n (No description)"])
             elif d == tasks["hn"]:
                 hn_resources = d.result()
                 lines = [
-                    f"- {r.title}\n  {r.url}\n  {r.description or '(no description)'}" for r in hn_resources
+                    f"{r.title}\n  {r.url}\n  {r.description or '(No description)'}" for r in hn_resources
                 ]
                 yield ("HackerNews", lines)
             elif d == tasks["reddit"]:
                 reddit_links = d.result()
-                yield ("Reddit", [f"- {link}" for link in reddit_links])
+                yield ("Reddit", [f"(No title)\n {link}\n (No description)" for link in reddit_links])
 
 
 async def main():
