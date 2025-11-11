@@ -5,22 +5,22 @@ import ast
 
 # Result card component
 class Resource(rio.Component):
-    title: str          # resource title 
-    link: str           # resource link
-    description: str    # resource description
-    source: str         # where the resource comes from
+    title: str
+    link: str
+    description: str
+    source: str
     
     def build(self) -> rio.Component:
         return rio.Card(
             rio.Column(
                 rio.Text(
                     self.title,
-                    style=rio.TextStyle(font_weight="bold", font_size=1.1),
+                    style=rio.TextStyle(font_weight="bold", font_size=1),
                     selectable=True,
                     wrap=True,
                 ),
                 rio.Link(
-                    content="Read the Article",
+                    content=rio.Text("Read the Article", italic=True, justify="center", font_size=0.9, fill=rio.Color.from_hex("#0377fb")),
                     target_url=self.link,
                     open_in_new_tab=True,
                 ),
@@ -29,11 +29,13 @@ class Resource(rio.Component):
                     style="text",
                     selectable=True,
                     wrap=True,
+                    font_size=0.9,
                 ),
                 spacing=0.5,
                 margin=1.5,
             ),
             elevate_on_hover=True,
+            colorize_on_hover=True,
         )
 
 
@@ -43,23 +45,19 @@ class Properly(rio.Component):
     results: list[tuple[str, str, str, str]] = []
     is_searching: bool = False
     
-    
     async def search(self) -> None:
         """Performing GET request and collect the results asynchronously"""
-
-        if not self.query.strip():
-            return
-            
+        
+        if not self.query.strip(): return
         self.is_searching = True
         self.results = []
+        self.force_refresh() # Force UI update before starting search
         
         try:
             async with httpx.AsyncClient(timeout=None) as client:
-                # where fastAPI is running -> perform get request
                 url = f"http://localhost:8000/search?query={self.query}"
                 async with client.stream("GET", url) as response:
                     async for line in response.aiter_lines():
-                        # handle API response
                         if not line.strip():
                             continue
                         try:
@@ -67,22 +65,26 @@ class Properly(rio.Component):
                             source = item["source"]
                             resources = item["resources"]
                             
-                            for entry in resources:
-                                parts = entry.split("\n")
-                                if len(parts) >= 3:
-                                    title = parts[0].strip()
-                                    link = parts[1].strip()
-                                    descr = parts[2].strip()
-                                    self.results.append((title, link, descr, source))
+                            # Process and append results
+                            new_results = [
+                                (parts[0].strip(), parts[1].strip(), parts[2].strip(), source)
+                                for entry in resources
+                                for parts in [entry.split("\n")]
+                                if len(parts) >= 3
+                            ]
+                            
+                            self.results.extend(new_results)
+                            self.force_refresh()  # Update UI after each batch
+                            
                         except Exception:
                             continue
         finally:
             self.is_searching = False
-    
+            self.force_refresh()
 
     def build(self) -> rio.Component:
         return rio.Column(
-            # Header section
+            # Header section (30% of the page)
             rio.Column(
                 rio.Text(
                     "Learn Properly",
@@ -92,31 +94,38 @@ class Properly(rio.Component):
                         all_caps=True,
                     ),
                     align_x=0.5,
+                    grow_x=True,
                 ),
                 rio.TextInput(
                     text=self.bind().query,
                     label="Type a topic here!",
                     on_confirm=lambda _: self.search(),
                     min_width=30,
+                    grow_x=True,
                 ),
                 rio.Button(
                     content=rio.Text(
                         "GO",
                         align_x=0.5,
-                        style=rio.TextStyle(fill=rio.Color.from_hex("#ffffff"), font_weight="bold")
+                        style=rio.TextStyle(
+                            fill=rio.Color.from_hex("#ffffff"),
+                            font_weight="bold"
+                        )
                     ),
                     on_press=lambda: self.search(),
                     style="major",
                     is_sensitive=not self.is_searching,
-                    min_width=10,
+                    min_width=15,
+                    grow_x=True,
                     color="secondary",
                 ),
                 spacing=1,
                 align_x=0.5,
                 margin_top=3,
+                grow_x=True,
             ),
             
-            # Results section -> resources stream
+            # Results section (70% of the page)
             rio.ScrollContainer(
                 rio.Column(
                     *[
@@ -132,9 +141,12 @@ class Properly(rio.Component):
                     margin=2,
                     grow_x=True,
                 ) if self.results else rio.Text(
-                    "No results yet" if not self.is_searching else "Searching...",
+                    "Searching..." if self.is_searching else "No results yet",
                     style="dim",
                     margin_top=2,
+                    justify="center",
+                    align_y=0,
+                    italic=True,
                 ),
                 grow_y=True,
                 margin_top=2,
@@ -145,5 +157,6 @@ class Properly(rio.Component):
             margin_bottom=1,
             margin_left=2,
             margin_right=2,
-            proportions=(1,2.5),
+            min_width=50,
+            proportions=(0.3, 0.7),  # 30% header, 70% results
         )
