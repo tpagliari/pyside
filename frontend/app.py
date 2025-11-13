@@ -15,13 +15,13 @@ class Resource(rio.Component):
             rio.Column(
                 rio.Text(
                     self.title,
-                    style=rio.TextStyle(font_weight="bold", font_size=1),
+                    style=rio.TextStyle(font_weight="bold", font_size=1.3),
                     selectable=True,
                     overflow="wrap",
                     justify="center",
                 ),
                 rio.Link(
-                    content=rio.Text("Read the Article", italic=True, justify="center", font_size=0.9, fill=rio.Color.from_hex("#0377fb")),
+                    content=rio.Text("Read the Article", italic=True, justify="center", font_size=1, fill=rio.Color.from_hex("#0377fb")),
                     target_url=self.link,
                     open_in_new_tab=True,
                 ),
@@ -30,7 +30,7 @@ class Resource(rio.Component):
                     style="text",
                     selectable=True,
                     overflow="wrap",
-                    font_size=0.9,
+                    font_size=1,
                     justify="center"
                 ),
                 spacing=0.5,
@@ -83,11 +83,14 @@ class Properly(rio.Component):
         finally:
             self.is_searching = False
             self.force_refresh()
+            
 
     def build(self) -> rio.Component:
         return rio.Column(
+
             # Header section (30% of the page)
             rio.Column(
+
                 rio.Text(
                     "Learn Properly",
                     style=rio.TextStyle(
@@ -98,33 +101,37 @@ class Properly(rio.Component):
                     align_x=0.5,
                     grow_x=True,
                 ),
-                rio.TextInput(
-                    text=self.bind().query,
-                    label="Type a topic here!",
-                    on_confirm=lambda _: self.search(),
-                    min_width=30,
-                    grow_x=True,
-                ),
-                rio.Button(
-                    content=rio.Text(
-                        "GO",
-                        align_x=0.5,
-                        style=rio.TextStyle(
-                            fill=rio.Color.from_hex("#ffffff"),
-                            font_weight="bold"
-                        )
+
+                rio.Row(
+                    rio.TextInput(
+                        text=self.bind().query,
+                        label="Type a topic here!", # TODO: can we make this disappear after the user starts typing?
+                        on_confirm=lambda _: self.search(),
+                        grow_x=True,
+                        min_width=30,
+                        style="rounded",
                     ),
-                    on_press=lambda: self.search(),
-                    style="major",
-                    is_sensitive=not self.is_searching,
-                    min_width=15,
+                    rio.Button(
+                        content=rio.Text(
+                            "GO",
+                            align_x=0.5,
+                            style=rio.TextStyle(
+                                fill=rio.Color.from_hex("#ffffff"),
+                                font_weight="bold"
+                            ),
+                        ),
+                        on_press=lambda: self.search(),
+                        shape="rounded",
+                        style="major",
+                        is_sensitive=not self.is_searching,
+                        grow_x=True,
+                    ),
+                    spacing=1,
                     grow_x=True,
-                    color="secondary",
+                    proportions=(0.9,0.1)
                 ),
                 spacing=1,
-                align_x=0.5,
-                margin_top=3,
-                grow_x=True,
+                margin_top=2,
             ),
             
             # Results section (70% of the page)
@@ -140,8 +147,6 @@ class Properly(rio.Component):
                         for title, link, descr, source in self.results
                     ],
                     spacing=1,
-                    margin=2,
-                    grow_x=True,
                 ) if self.results else rio.Text(
                     "Searching..." if self.is_searching else "No results yet",
                     style="dim",
@@ -153,12 +158,13 @@ class Properly(rio.Component):
                 grow_y=True,
                 margin_top=2,
                 grow_x=True,
+                margin_bottom=1,
             ),
             spacing=0.5,
             align_x=0.5,
-            margin_bottom=1,
             margin_left=2,
             margin_right=2,
             min_width=50,
-            proportions=(0.3, 0.7),  # 30% header, 70% results
+            min_height=46.7,
+            #proportions=(2, 8),  
         )
