@@ -4,7 +4,7 @@ import asyncio
 from .wikiMedia.wsearch import wikipedia_search
 from .reddit.rsearch import get_all_resources as reddit_search
 from .hackerNews.hnsearch import get_resources as hn_search
-from arXiv.asearch import get_resources as arxiv_search
+from .arXiv.asearch import get_resources as arxiv_search
 
 
 async def stream_arxiv(query: str, n: int):
@@ -60,7 +60,7 @@ async def search_stream(query: str):
             elif d == tasks["arxiv"]:
                 try:
                     r = d.result()
-                    yield ("arXiv", [f"- {r.title}\n  {r.url}\n  {r.description}"])
+                    yield ("arXiv", [f"{r.title}\n  {r.url}\n  {r.description}"])
                     # schedule next arxiv result
                     tasks["arxiv"] = asyncio.create_task(arxiv_gen.__anext__())
                     pending.add(tasks["arxiv"])
