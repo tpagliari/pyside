@@ -1,6 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Iterable
-from collections import OrderedDict
 import arxiv
 
 
@@ -9,6 +8,7 @@ class ArxivResource:
     title: str
     url: str
     description: Optional[str]
+    source: str = field(default="arxiv")
 
     def __eq__(self, other):
         return self.url == other.url
@@ -26,6 +26,12 @@ def deduplicate(xs: Iterable) -> Iterable:
             yield x
 
 
+def mk_description(abstract: str, length: int) -> str:
+    if len(abstract) <= length:
+        return abstract
+    return abstract[:length] + "..."
+
+
 def search_arxiv(query: str, n: int = 5) -> Iterable[ArxivResource]:
     """Searches arXiv and yields `n` ArxivResource, ordered by relevance."""
 
@@ -38,7 +44,7 @@ def search_arxiv(query: str, n: int = 5) -> Iterable[ArxivResource]:
         yield ArxivResource(
             title=res.title.strip(),
             url=res.entry_id,
-            description=res.summary.strip()[:200] + "..." if res.summary else None
+            description=mk_description(res.summary.strip(), 200) if res.summary else "(No description)"
         )
 
 
